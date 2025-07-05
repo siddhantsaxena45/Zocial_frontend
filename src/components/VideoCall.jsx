@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 
-const VideoCall2 = () => {
+const VideoCall = () => {
   const [open, setOpen] = useState(false);
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
@@ -271,48 +271,41 @@ const VideoCall2 = () => {
     if (!localStream.current || !peerConnection.current) return;
 
     try {
-      // Stop current video tracks
+      // Stop current video tracks only (keep audio tracks)
       localStream.current.getVideoTracks().forEach((track) => track.stop());
 
-      // Get new stream with opposite facing mode
+      // Get new video stream only with opposite facing mode
       const newFacingMode = facingMode === "user" ? "environment" : "user";
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      const newVideoStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: newFacingMode },
-        audio: true,
-      });
-
-      // Apply current mute state to new audio tracks
-      newStream.getAudioTracks().forEach((track) => {
-        track.enabled = !muted;
+        audio: false, // Don't get new audio
       });
 
       // Apply current camera state to new video tracks
-      newStream.getVideoTracks().forEach((track) => {
+      newVideoStream.getVideoTracks().forEach((track) => {
         track.enabled = cameraOn;
       });
 
-      // Replace video track in peer connection
-      const videoTrack = newStream.getVideoTracks()[0];
-      const audioTrack = newStream.getAudioTracks()[0];
-      
+      // Replace only the video track in peer connection
+      const newVideoTrack = newVideoStream.getVideoTracks()[0];
       const videoSender = peerConnection.current.getSenders().find((s) => 
         s.track && s.track.kind === "video"
       );
-      const audioSender = peerConnection.current.getSenders().find((s) => 
-        s.track && s.track.kind === "audio"
-      );
       
       if (videoSender) {
-        await videoSender.replaceTrack(videoTrack);
-      }
-      if (audioSender) {
-        await audioSender.replaceTrack(audioTrack);
+        await videoSender.replaceTrack(newVideoTrack);
       }
 
+      // Create new combined stream with existing audio and new video
+      const combinedStream = new MediaStream([
+        ...localStream.current.getAudioTracks(), // Keep existing audio tracks
+        ...newVideoStream.getVideoTracks() // Add new video tracks
+      ]);
+
       // Update local stream and video element
-      localStream.current = newStream;
+      localStream.current = combinedStream;
       if (localVideoRef.current) {
-        localVideoRef.current.srcObject = newStream;
+        localVideoRef.current.srcObject = combinedStream;
       }
 
       setFacingMode(newFacingMode);
@@ -477,4 +470,4 @@ const VideoCall2 = () => {
   );
 };
 
-export default VideoCall2;
+export default VideoCall;
