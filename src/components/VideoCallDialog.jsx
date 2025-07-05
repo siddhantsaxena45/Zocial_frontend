@@ -26,7 +26,6 @@ const VideoCall = () => {
   const [loading, setLoading] = useState(false);
   const [incomingCall, setIncomingCall] = useState(false);
   const [callerInfo, setCallerInfo] = useState(null);
-  const [connectionState, setConnectionState] = useState("new");
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -37,22 +36,12 @@ const VideoCall = () => {
   const { socket } = useSelector((state) => state.socketio);
   const { user: loggedInUser, selectedUser } = useSelector((state) => state.auth);
 
-  // Enhanced ICE servers configuration for better cross-browser connectivity
+  // ICE servers configuration for better connectivity
   const iceServers = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:stun3.l.google.com:19302" },
-      { urls: "stun:stun4.l.google.com:19302" },
-      // Add more STUN servers for better connectivity
-      { urls: "stun:stun.services.mozilla.com" },
-      { urls: "stun:stun.stunprotocol.org:3478" },
     ],
-    // Add configuration for better cross-browser compatibility
-    iceCandidatePoolSize: 10,
-    bundlePolicy: "max-bundle",
-    rtcpMuxPolicy: "require",
   };
 
   const startCall = async () => {
@@ -63,107 +52,52 @@ const VideoCall = () => {
       setCallStarted(true);
       setOpen(true);
 
-      // Enhanced getUserMedia with better cross-browser support
-      const mediaConstraints = {
-        video: {
-          facingMode,
-          width: { min: 320, ideal: 640, max: 1280 },
-          height: { min: 240, ideal: 480, max: 720 },
-          frameRate: { min: 15, ideal: 30, max: 30 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: { ideal: 48000 },
-          channelCount: { ideal: 1 }
-        }
-      };
-
-      localStream.current = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      // Get user media with error handling
+      localStream.current = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode }, 
+        audio: true 
+      });
       
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream.current;
       }
 
-      // Create peer connection with enhanced configuration
+      // Create peer connection with ICE servers
       const pc = new RTCPeerConnection(iceServers);
       
-      // Enhanced event handlers
-      pc.onconnectionstatechange = () => {
-        console.log('Connection state:', pc.connectionState);
-        setConnectionState(pc.connectionState);
-        
-        if (pc.connectionState === 'failed') {
-          console.error('Connection failed, attempting to restart');
-          // Attempt to restart ICE
-          pc.restartIce();
-        } else if (pc.connectionState === 'disconnected') {
-          console.warn('Connection disconnected');
-          // Handle disconnection gracefully
-          setTimeout(() => {
-            if (pc.connectionState === 'disconnected') {
-              endCall(false);
-            }
-          }, 5000); // Wait 5 seconds before ending call
-        }
-      };
-
-      pc.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', pc.iceConnectionState);
-        
-        if (pc.iceConnectionState === 'failed') {
-          console.error('ICE connection failed');
-          pc.restartIce();
-        }
-      };
-
-      pc.onicegatheringstatechange = () => {
-        console.log('ICE gathering state:', pc.iceGatheringState);
-      };
-
       // Add tracks to peer connection
       localStream.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStream.current);
       });
 
-      // Handle remote stream with better error handling
+      // Handle remote stream
       pc.ontrack = (e) => {
-        console.log('Received remote track:', e.track.kind);
-        if (remoteVideoRef.current && e.streams && e.streams[0]) {
+        if (remoteVideoRef.current && e.streams[0]) {
           remoteVideoRef.current.srcObject = e.streams[0];
         }
       };
 
-      // Enhanced ICE candidate handling
+      // Handle ICE candidates
       pc.onicecandidate = (e) => {
-        if (e.candidate) {
-          console.log('Sending ICE candidate:', e.candidate.type);
-          if (socket) {
-            socket.emit("ice-candidate", {
-              to: selectedUser._id,
-              candidate: e.candidate.toJSON(), // Convert to JSON for better serialization
-            });
-          }
-        } else {
-          console.log('ICE gathering completed');
+        if (e.candidate && socket) {
+          socket.emit("ice-candidate", {
+            to: selectedUser._id,
+            candidate: e.candidate,
+          });
         }
       };
 
-      // Create offer with enhanced SDP options
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-        iceRestart: false
-      });
-
-      // Modify SDP for better cross-browser compatibility
-      const modifiedOffer = {
-        ...offer,
-        sdp: enhanceSDP(offer.sdp)
+      // Handle connection state changes
+      pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState);
+        if (pc.connectionState === 'failed') {
+          endCall(false); // Don't notify other side on connection failure
+        }
       };
 
-      await pc.setLocalDescription(modifiedOffer);
+      // Create and send offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
       if (socket) {
         socket.emit("video-offer", {
@@ -175,7 +109,7 @@ const VideoCall = () => {
       peerConnection.current = pc;
     } catch (err) {
       console.error("Error starting call:", err);
-      endCall(false);
+      endCall(false); // Don't notify on error
     } finally {
       setLoading(false);
     }
@@ -191,63 +125,19 @@ const VideoCall = () => {
     try {
       const { from, offer } = callerInfo;
       
-      // Enhanced getUserMedia with better cross-browser support
-      const mediaConstraints = {
-        video: {
-          facingMode,
-          width: { min: 320, ideal: 640, max: 1280 },
-          height: { min: 240, ideal: 480, max: 720 },
-          frameRate: { min: 15, ideal: 30, max: 30 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: { ideal: 48000 },
-          channelCount: { ideal: 1 }
-        }
-      };
-
-      localStream.current = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      // Get user media
+      localStream.current = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode }, 
+        audio: true 
+      });
       
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream.current;
       }
 
-      // Create peer connection with enhanced configuration
+      // Create peer connection
       const pc = new RTCPeerConnection(iceServers);
       
-      // Enhanced event handlers (same as startCall)
-      pc.onconnectionstatechange = () => {
-        console.log('Connection state:', pc.connectionState);
-        setConnectionState(pc.connectionState);
-        
-        if (pc.connectionState === 'failed') {
-          console.error('Connection failed, attempting to restart');
-          pc.restartIce();
-        } else if (pc.connectionState === 'disconnected') {
-          console.warn('Connection disconnected');
-          setTimeout(() => {
-            if (pc.connectionState === 'disconnected') {
-              endCall(false);
-            }
-          }, 5000);
-        }
-      };
-
-      pc.oniceconnectionstatechange = () => {
-        console.log('ICE connection state:', pc.iceConnectionState);
-        
-        if (pc.iceConnectionState === 'failed') {
-          console.error('ICE connection failed');
-          pc.restartIce();
-        }
-      };
-
-      pc.onicegatheringstatechange = () => {
-        console.log('ICE gathering state:', pc.iceGatheringState);
-      };
-
       // Add tracks
       localStream.current.getTracks().forEach((track) => {
         pc.addTrack(track, localStream.current);
@@ -255,94 +145,58 @@ const VideoCall = () => {
 
       // Handle remote stream
       pc.ontrack = (e) => {
-        console.log('Received remote track:', e.track.kind);
-        if (remoteVideoRef.current && e.streams && e.streams[0]) {
+        if (remoteVideoRef.current && e.streams[0]) {
           remoteVideoRef.current.srcObject = e.streams[0];
         }
       };
 
-      // Enhanced ICE candidate handling
+      // Handle ICE candidates
       pc.onicecandidate = (e) => {
-        if (e.candidate) {
-          console.log('Sending ICE candidate:', e.candidate.type);
-          if (socket) {
-            socket.emit("ice-candidate", {
-              to: from,
-              candidate: e.candidate.toJSON(),
-            });
-          }
-        } else {
-          console.log('ICE gathering completed');
+        if (e.candidate && socket) {
+          socket.emit("ice-candidate", {
+            to: from,
+            candidate: e.candidate,
+          });
         }
       };
 
-      // Set remote description with enhanced SDP
-      const enhancedOffer = {
-        ...offer,
-        sdp: enhanceSDP(offer.sdp)
-      };
-      
-      await pc.setRemoteDescription(new RTCSessionDescription(enhancedOffer));
-
-      // Add buffered ICE candidates with delay for better success rate
-      setTimeout(async () => {
-        for (const candidate of iceCandidatesBuffer.current) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log('Added buffered ICE candidate');
-          } catch (err) {
-            console.error("Error adding buffered ICE candidate:", err);
-          }
+      // Handle connection state changes
+      pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState);
+        if (pc.connectionState === 'failed') {
+          endCall(false); // Don't notify other side on connection failure
         }
-        iceCandidatesBuffer.current = [];
-      }, 100);
-
-      // Create answer with enhanced SDP options
-      const answer = await pc.createAnswer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-      });
-
-      // Modify SDP for better cross-browser compatibility
-      const modifiedAnswer = {
-        ...answer,
-        sdp: enhanceSDP(answer.sdp)
       };
 
-      await pc.setLocalDescription(modifiedAnswer);
+      // Set remote description
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+      // Add buffered ICE candidates
+      for (const candidate of iceCandidatesBuffer.current) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("Error adding ICE candidate:", err);
+        }
+      }
+      iceCandidatesBuffer.current = [];
+
+      // Create and send answer
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
       if (socket) {
         socket.emit("video-answer", {
           to: from,
-          answer: pc.localDescription,
+          answer,
         });
       }
 
       peerConnection.current = pc;
     } catch (err) {
       console.error("Error accepting call:", err);
-      endCall(false);
+      endCall(false); // Don't notify on error
     }
-  };
-
-  // Function to enhance SDP for better cross-browser compatibility
-  const enhanceSDP = (sdp) => {
-    // Remove unsupported codecs and add compatibility improvements
-    let enhancedSDP = sdp;
-    
-    // Ensure VP8 codec is preferred for better compatibility
-    enhancedSDP = enhancedSDP.replace(/a=rtpmap:(\d+) VP9.*\r\n/g, '');
-    enhancedSDP = enhancedSDP.replace(/a=rtcp-fb:(\d+) ccm fir\r\n/g, '');
-    
-    // Add required extensions for better compatibility
-    if (!enhancedSDP.includes('a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level')) {
-      enhancedSDP = enhancedSDP.replace(
-        /m=audio.*\r\n/,
-        '$&a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\n'
-      );
-    }
-    
-    return enhancedSDP;
   };
 
   const rejectCall = () => {
@@ -388,7 +242,6 @@ const VideoCall = () => {
     setFacingMode("user");
     setCallerInfo(null);
     setIncomingCall(false);
-    setConnectionState("new");
     iceCandidatesBuffer.current = [];
   };
 
@@ -424,13 +277,8 @@ const VideoCall = () => {
       // Get new video stream only with opposite facing mode
       const newFacingMode = facingMode === "user" ? "environment" : "user";
       const newVideoStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: newFacingMode,
-          width: { min: 320, ideal: 640, max: 1280 },
-          height: { min: 240, ideal: 480, max: 720 },
-          frameRate: { min: 15, ideal: 30, max: 30 }
-        },
-        audio: false,
+        video: { facingMode: newFacingMode },
+        audio: false, // Don't get new audio
       });
 
       // Apply current camera state to new video tracks
@@ -450,8 +298,8 @@ const VideoCall = () => {
 
       // Create new combined stream with existing audio and new video
       const combinedStream = new MediaStream([
-        ...localStream.current.getAudioTracks(),
-        ...newVideoStream.getVideoTracks()
+        ...localStream.current.getAudioTracks(), // Keep existing audio tracks
+        ...newVideoStream.getVideoTracks() // Add new video tracks
       ]);
 
       // Update local stream and video element
@@ -470,54 +318,38 @@ const VideoCall = () => {
     if (!socket) return;
 
     const handleVideoOffer = ({ from, offer }) => {
-      console.log('Received video offer from:', from);
       setIncomingCall(true);
       setCallerInfo({ from, offer });
     };
 
     const handleVideoAnswer = async ({ answer }) => {
-      console.log('Received video answer');
       if (!peerConnection.current) return;
-      
       try {
-        // Enhance the answer SDP before setting it
-        const enhancedAnswer = {
-          ...answer,
-          sdp: enhanceSDP(answer.sdp)
-        };
-        
-        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(enhancedAnswer));
-        console.log('Remote description set successfully');
+        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
       } catch (err) {
         console.error("Set answer failed:", err);
       }
     };
 
     const handleIceCandidate = async ({ candidate }) => {
-      console.log('Received ICE candidate:', candidate.type);
-      
       if (peerConnection.current?.remoteDescription?.type) {
         try {
           await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
-          console.log('ICE candidate added successfully');
         } catch (err) {
           console.error("Error adding ICE candidate:", err);
         }
       } else {
-        console.log('Buffering ICE candidate');
         iceCandidatesBuffer.current.push(candidate);
       }
     };
 
     const handleCallRejected = () => {
-      console.log('Call was rejected');
       alert("Call was rejected.");
-      endCall(false);
+      endCall(false); // Don't notify back when we receive rejection
     };
 
     const handleCallEnded = () => {
-      console.log('Call ended by remote peer');
-      endCall(false);
+      endCall(false); // Don't notify back when we receive call-ended
     };
 
     // Add event listeners
@@ -540,7 +372,7 @@ const VideoCall = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      endCall(false);
+      endCall(false); // Don't notify on component unmount
     };
   }, []);
 
@@ -548,10 +380,7 @@ const VideoCall = () => {
     <div>
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-          <div className="text-center">
-            <p className="text-white text-lg mb-2">Starting call...</p>
-            <p className="text-white text-sm">Connection: {connectionState}</p>
-          </div>
+          <p className="text-white">Starting call...</p>
         </div>
       )}
 
@@ -587,7 +416,7 @@ const VideoCall = () => {
         >
           <DialogHeader>
             <DialogTitle id="video-call-description" className="text-white text-center text-lg">
-              Video Call - {connectionState}
+              Video Call
             </DialogTitle>
           </DialogHeader>
 
