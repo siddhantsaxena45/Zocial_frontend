@@ -68,7 +68,7 @@ const ChatUser = ({ user, isOnline, onBack }) => {
   };
 
   return (
-    <div className="w-full pt-14 pb-10 md:py-0 h-screen bg-purple-100 flex flex-col">
+    <div className="w-full pt-14 pb-16 md:py-0 h-screen bg-purple-100 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gradient-to-b from-pink-200 to-purple-300 shadow-md">
         <div className="flex items-center gap-3">
