@@ -46,7 +46,7 @@ const ChatUser = ({ user, isOnline, onBack }) => {
       setLoading(true);
 
       const res = await axios.post(
-        `http://localhost:8000/api/v1/message/send/${user._id}`,
+        `https://zocial-backend-m52y.onrender.com/api/v1/message/send/${user._id}`,
         { message: text },
         {
           headers: { "Content-Type": "application/json" },

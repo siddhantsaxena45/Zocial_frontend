@@ -9,7 +9,7 @@ const useGetAllPost = () => {
    useEffect(() => {
      const fetchAllPost = async () => {
         try {
-          const response = await axios.get("http://localhost:8000/api/v1/post/all",{withCredentials: true});
+          const response = await axios.get("https://zocial-backend-m52y.onrender.com/api/v1/post/all",{withCredentials: true});
           if(response.data.success){
             
             dispatch(setPosts(response.data.posts))

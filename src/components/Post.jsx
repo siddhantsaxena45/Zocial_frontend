@@ -43,7 +43,7 @@ const Post = ({ post }) => {
     const deletePostHandler = async (id) => {
 
         try {
-            const res = await axios.delete(`http://localhost:8000/api/v1/post/delete/${id}`, { withCredentials: true })
+            const res = await axios.delete(`https://zocial-backend-m52y.onrender.com/api/v1/post/delete/${id}`, { withCredentials: true })
 
             if (res.data.success) {
                 const newPosts = posts.filter(postitem => postitem._id !== id)
@@ -59,7 +59,7 @@ const Post = ({ post }) => {
 
         try {
             const action = isliked ? "dislike" : "like"
-            const res = await axios.get(`http://localhost:8000/api/v1/post/${id}/${action}`, { withCredentials: true })
+            const res = await axios.get(`https://zocial-backend-m52y.onrender.com/api/v1/post/${id}/${action}`, { withCredentials: true })
             if (res.data.success) {
                 let updatedlikes = isliked ? postlikes - 1 : postlikes + 1
                 let updatedPosts = posts.map(postitem => {
@@ -94,7 +94,7 @@ const handleShare = async (imageUrl) => {
     const commentHandler = async () => {
         try {
             const res = await axios.post(
-                `http://localhost:8000/api/v1/post/${post._id}/comment`,
+                `https://zocial-backend-m52y.onrender.com/api/v1/post/${post._id}/comment`,
                 { comment: text },
                 {
                     headers: { "Content-Type": "application/json" },
@@ -128,7 +128,7 @@ const handleShare = async (imageUrl) => {
 
     const bookmarkHandler = async () => {
         try {
-            const res = await axios.get(`http://localhost:8000/api/v1/post/${post._id}/bookmark`, { withCredentials: true })
+            const res = await axios.get(`https://zocial-backend-m52y.onrender.com/api/v1/post/${post._id}/bookmark`, { withCredentials: true })
             if (res.data.success) {
                 // Update the Redux posts array
                 const updatedBookmarks = res.data.bookmarks;

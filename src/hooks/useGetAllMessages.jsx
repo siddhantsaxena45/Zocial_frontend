@@ -12,7 +12,7 @@ const useGetAllMessages = () => {
     if (!selectedUser?._id) return;
     try {
       const response = await axios.get(
-        `http://localhost:8000/api/v1/message/all/${selectedUser._id}`,
+        `https://zocial-backend-m52y.onrender.com/api/v1/message/all/${selectedUser._id}`,
         { withCredentials: true }
       );
       if (response.data.success) {

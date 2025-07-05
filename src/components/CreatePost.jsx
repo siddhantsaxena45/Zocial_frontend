@@ -46,7 +46,7 @@ const CreatePost = ({ open, setOpen }) => {
         formdata.append("image", file)
       }
       setLoading(true)
-      let response = await axios.post("http://localhost:8000/api/v1/post/addpost", formdata,
+      let response = await axios.post("https://zocial-backend-m52y.onrender.com/api/v1/post/addpost", formdata,
 
         {
           headers: {

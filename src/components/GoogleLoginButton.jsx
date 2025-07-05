@@ -14,7 +14,7 @@ const GoogleLoginButton = () => {
     try {
       const { credential } = credentialResponse;
       const res = await axios.post(
-        "http://localhost:8000/api/v1/user/google-login",
+        "https://zocial-backend-m52y.onrender.com/api/v1/user/google-login",
         { token: credential },
         { withCredentials: true }
       );

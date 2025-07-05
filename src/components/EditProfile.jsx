@@ -64,7 +64,7 @@ const EditProfile = () => {
 
         try {
             setLoading(true)
-            let response = await axios.post("http://localhost:8000/api/v1/user/profile/edit", formData, {
+            let response = await axios.post("https://zocial-backend-m52y.onrender.com/api/v1/user/profile/edit", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
 
                 withCredentials: true
