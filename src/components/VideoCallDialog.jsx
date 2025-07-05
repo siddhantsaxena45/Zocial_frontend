@@ -271,30 +271,41 @@ const VideoCall = () => {
     if (!localStream.current || !peerConnection.current) return;
 
     try {
-      // Stop current video tracks
+      // Stop current video tracks only (keep audio tracks)
       localStream.current.getVideoTracks().forEach((track) => track.stop());
 
-      // Get new stream with opposite facing mode
+      // Get new video stream only with opposite facing mode
       const newFacingMode = facingMode === "user" ? "environment" : "user";
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      const newVideoStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: newFacingMode },
-        audio: true,
+        audio: false, // Don't get new audio
       });
 
-      // Replace video track in peer connection
-      const videoTrack = newStream.getVideoTracks()[0];
-      const sender = peerConnection.current.getSenders().find((s) => 
+      // Apply current camera state to new video tracks
+      newVideoStream.getVideoTracks().forEach((track) => {
+        track.enabled = cameraOn;
+      });
+
+      // Replace only the video track in peer connection
+      const newVideoTrack = newVideoStream.getVideoTracks()[0];
+      const videoSender = peerConnection.current.getSenders().find((s) => 
         s.track && s.track.kind === "video"
       );
       
-      if (sender) {
-        await sender.replaceTrack(videoTrack);
+      if (videoSender) {
+        await videoSender.replaceTrack(newVideoTrack);
       }
 
+      // Create new combined stream with existing audio and new video
+      const combinedStream = new MediaStream([
+        ...localStream.current.getAudioTracks(), // Keep existing audio tracks
+        ...newVideoStream.getVideoTracks() // Add new video tracks
+      ]);
+
       // Update local stream and video element
-      localStream.current = newStream;
+      localStream.current = combinedStream;
       if (localVideoRef.current) {
-        localVideoRef.current.srcObject = newStream;
+        localVideoRef.current.srcObject = combinedStream;
       }
 
       setFacingMode(newFacingMode);

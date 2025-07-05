@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-// import VideoCallDialog from "./VideoCallDialog";
-import VideoCall2 from "./VideoCall";
+import VideoCallDialog from "./VideoCallDialog";
+// import VideoCall2 from "./VideoCall";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
@@ -102,7 +102,7 @@ const ChatUser = ({ user, isOnline, onBack }) => {
             </span>
           </div>
         </div>
-        <VideoCall2/>
+        <VideoCall/>
       </div>
 
       {/* Messages */}
