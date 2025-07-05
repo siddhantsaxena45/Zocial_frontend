@@ -91,16 +91,7 @@ const CommentDialog = ({ open, setOpen }) => {
                   {selectedPost?.author?.username}
                 </span>
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <MoreHorizontal className='cursor-pointer' />
-                </DialogTrigger>
-                <DialogContent className="flex flex-col  items-center text-sm text-center ">
-                  <div className='cursor-pointer w-full text-[#E60023]'>Unfollow</div>
-                  <div className='cursor-pointer w-full'>Add to favourites</div>
-
-                </DialogContent>
-              </Dialog>
+              
 
             </div>
 
