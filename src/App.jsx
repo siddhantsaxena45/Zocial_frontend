@@ -51,6 +51,7 @@ function App() {
   const { socket } = useSelector(state => state.socketio)
   const dispatch = useDispatch()
   useEffect(() => {
+    if(!user && !socket) return <Login />
     if (user) {
       const socketio = io("https://zocial-backend-m52y.onrender.com", {
         query: {

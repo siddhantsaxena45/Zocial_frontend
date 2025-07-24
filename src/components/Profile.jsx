@@ -68,6 +68,12 @@ const handleFollow = async () => {
       );
     }
   } catch (err) {
+    if(err.response?.status === 401){
+      toast.error(err.response?.data?.message || "redirecting to login page");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
+    }
     toast.error(err.response?.data?.message || "Action failed");
   }
 };
