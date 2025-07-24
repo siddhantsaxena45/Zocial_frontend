@@ -14,6 +14,7 @@ import { setOnlineUsers } from "./redux/chatSlice"
 import { setLikeNotification } from "./redux/rtnSlice"
 import { setMessageNotification } from "./redux/messageNotificationSlice";
 import ProtectedRoutes from "./components/ProtectedRoutes"
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const browserRouter = createBrowserRouter([
   {
@@ -84,7 +85,8 @@ function App() {
 
   return (
     <>
-      <RouterProvider router={browserRouter} />
+     <GoogleOAuthProvider clientId="51124827144-tlbnav5dcfmcq51fjq9v1e73smetc2jr.apps.googleusercontent.com"><RouterProvider router={browserRouter} /></GoogleOAuthProvider>
+      
     </>
   )
 }

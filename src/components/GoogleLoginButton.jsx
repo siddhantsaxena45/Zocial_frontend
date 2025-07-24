@@ -1,5 +1,5 @@
 // components/GoogleLoginButton.jsx
-import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +32,7 @@ const GoogleLoginButton = () => {
 
   return (<>
     <div className="mb-4">
-      <GoogleOAuthProvider clientId="51124827144-tlbnav5dcfmcq51fjq9v1e73smetc2jr.apps.googleusercontent.com">
+     
         <GoogleLogin
           onSuccess={handleLoginSuccess}
           onError={() => {
@@ -41,7 +41,7 @@ const GoogleLoginButton = () => {
           }}
           
         />
-      </GoogleOAuthProvider>
+     
     </div>
   </>
   );
